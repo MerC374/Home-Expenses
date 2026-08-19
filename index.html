@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home Expenses— Grocery Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ROLE GATE -->
+<div class="gate" id="gate">
+  <h1 style="font-family:'Fraunces',serif;">Home Expenses</h1>
+  <p>Who's using this right now?</p>
+  <button class="gate-btn primary" id="ownerGateBtn">I'm the owner</button>
+  <div class="pin-box" id="pinBox">
+    <input type="password" id="pinInput" placeholder="Enter PIN" inputmode="numeric">
+    <button class="btn-primary" id="pinSubmit">Go</button>
+  </div>
+  <div id="pinError" style="color:var(--rust);font-size:12px;margin-top:6px;"></div>
+  <button class="gate-btn" id="helperGateBtn">I'm doing the shopping</button>
+</div>
+
+<!-- MAIN APP -->
+<div class="wrap hidden" id="app">
+  <header>
+    <h1>Home Expenses</h1>
+    <button class="role-badge" id="switchRoleBtn"></button>
+  </header>
+  <div class="sub" id="dateLabel"></div>
+  <div id="bannerArea"></div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="today">Today</button>
+    <button class="tab" data-tab="week">This week</button>
+    <button class="tab" data-tab="month">This month</button>
+  </div>
+
+  <!-- TODAY -->
+  <div id="tab-today">
+    <div class="card owner-only" id="addCard">
+      <h2>Add to today's list</h2>
+      <div class="row" style="margin-bottom:8px;">
+        <select id="catSelect" class="field"></select>
+        <input type="text" id="itemInput" class="field" placeholder="Item name" list="itemSuggestions">
+        <datalist id="itemSuggestions"></datalist>
+      </div>
+      <div class="row">
+        <input type="number" id="qtyInput" class="field" placeholder="Qty needed" min="0" step="0.1">
+        <select id="unitSelect" class="field">
+          <option>kg</option><option>g</option><option>l</option><option>ml</option>
+          <option>pcs</option><option>dozen</option><option>packet</option>
+        </select>
+        <button class="btn-primary" id="addBtn">Add</button>
+      </div>
+    </div>
+
+    <div class="row" id="filterChips" style="margin-bottom:4px;"></div>
+
+    <div class="card" id="listCard">
+      <h2>Items</h2>
+      <div id="listContainer"></div>
+    </div>
+
+    <div class="receipt">
+      <div class="receipt-row"><span id="pendingCount">0 pending</span><span id="doneCount">0 purchased</span></div>
+      <div class="receipt-total"><span>Today's total</span><span id="todayTotal">₹0</span></div>
+    </div>
+  </div>
+
+  <!-- WEEK -->
+  <div id="tab-week" style="display:none;"></div>
+
+  <!-- MONTH -->
+  <div id="tab-month" style="display:none;"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
