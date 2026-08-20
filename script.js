@@ -1,5 +1,10 @@
 const OWNER_PIN = "1234"; // change this before giving the link to anyone
 
+// ---- Firebase Realtime Database ----
+// Replace with your own project's URL: Firebase console → Realtime Database → copy the URL shown at the top.
+// It looks like: https://your-project-id-default-rtdb.firebaseio.com
+const FIREBASE_URL = "https://YOUR-PROJECT-ID-default-rtdb.firebaseio.com";
+
 const CATALOG = {
   "Vegetables": ["Potato (Aloo)","Onion (Pyaz)","Tomato","Ginger-Garlic","Green Chili","Spinach (Palak)","Cauliflower","Cabbage","Capsicum","Cucumber","Lady Finger (Bhindi)"],
   "Fruits": ["Banana","Apple","Papaya","Orange","Mango","Grapes"],
@@ -12,8 +17,10 @@ const CATALOG = {
 const CATEGORIES = Object.keys(CATALOG);
 const STORAGE_KEY = "grocery-entries";
 let entries = [];
+let helpers = [];
 let activeFilter = "All";
 let role = null; // 'owner' | 'helper'
+let currentHelper = null; // name string when role === 'helper'
 let storageOk = true;
 
 function todayStr(){ return new Date().toISOString().slice(0,10); }
@@ -39,23 +46,54 @@ function tryPin(){
   if(val === OWNER_PIN){ enterApp('owner'); }
   else { document.getElementById('pinError').textContent = "Wrong PIN — try again"; }
 }
-document.getElementById('helperGateBtn').addEventListener('click', ()=> enterApp('helper'));
+document.getElementById('helperGateBtn').addEventListener('click', async ()=>{
+  await loadHelpers();
+  const sel = document.getElementById('helperNameSelect');
+  if(helpers.length===0){
+    document.getElementById('helperNameError').textContent = "No helpers set up yet — ask the owner to add your name first.";
+    return;
+  }
+  sel.innerHTML = helpers.map(h=>`<option value="${h.name}">${h.name}</option>`).join('');
+  document.getElementById('helperNameBox').classList.add('open');
+  document.getElementById('helperNameBox2').classList.add('open');
+});
+document.getElementById('helperNameSubmit').addEventListener('click', tryHelperPin);
+document.getElementById('helperPinInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryHelperPin(); });
+function tryHelperPin(){
+  const name = document.getElementById('helperNameSelect').value;
+  const pin = document.getElementById('helperPinInput').value;
+  const match = helpers.find(h=>h.name===name);
+  if(!match){ document.getElementById('helperNameError').textContent = "Select your name first"; return; }
+  if(match.pin && match.pin !== pin){
+    document.getElementById('helperNameError').textContent = "Wrong PIN — try again";
+    return;
+  }
+  currentHelper = name;
+  enterApp('helper');
+}
 
 async function enterApp(r){
   role = r;
   document.getElementById('gate').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   document.querySelectorAll('.owner-only').forEach(el=> el.style.display = role==='owner' ? '' : 'none');
-  document.getElementById('switchRoleBtn').textContent = role==='owner' ? 'Owner · switch' : 'Shopping · switch';
+  document.getElementById('switchRoleBtn').textContent = role==='owner' ? 'Owner · switch' : `${currentHelper} · switch`;
   document.getElementById('switchRoleBtn').onclick = ()=>{
-    role = null;
+    role = null; currentHelper = null;
     document.getElementById('app').classList.add('hidden');
     document.getElementById('gate').classList.remove('hidden');
     document.getElementById('pinBox').classList.remove('open');
+    document.getElementById('helperNameBox').classList.remove('open');
+    document.getElementById('helperNameBox2').classList.remove('open');
     document.getElementById('pinInput').value='';
     document.getElementById('pinError').textContent='';
+    document.getElementById('helperNameError').textContent='';
+    document.getElementById('helperPinInput').value='';
   };
   initSelectors();
+  if(role==='owner') await loadHelpers();
+  renderHelperChips();
+  populateAssignSelect();
   await loadEntries();
   renderToday();
 }
@@ -75,20 +113,29 @@ function refreshSuggestions(){
   dl.innerHTML = (CATALOG[cat]||[]).map(i=>`<option value="${i}">`).join('');
 }
 
-/* ---------- STORAGE ---------- */
+/* ---------- STORAGE (Firebase Realtime Database, plain REST) ---------- */
 async function loadEntries(){
   try{
-    const res = await window.storage.get(STORAGE_KEY, true);
-    entries = res && res.value ? JSON.parse(res.value) : [];
+    const res = await fetch(`${FIREBASE_URL}/entries.json`);
+    if(!res.ok) throw new Error('fetch failed');
+    const data = await res.json();
+    entries = data ? Object.values(data) : [];
     storageOk = true;
   }catch(e){
     entries = [];
-    storageOk = true; // key just doesn't exist yet — not an error
+    storageOk = false;
+    showBanner("Couldn't load today's list — check your internet connection, or the site isn't connected to a database yet.");
   }
 }
 async function saveEntries(){
   try{
-    await window.storage.set(STORAGE_KEY, JSON.stringify(entries), true);
+    const asObject = entries.reduce((acc,e)=>{ acc[e.id]=e; return acc; }, {});
+    const res = await fetch(`${FIREBASE_URL}/entries.json`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(asObject)
+    });
+    if(!res.ok) throw new Error('save failed');
     storageOk = true;
   }catch(e){
     storageOk = false;
@@ -96,17 +143,81 @@ async function saveEntries(){
   }
 }
 
+async function loadHelpers(){
+  try{
+    const res = await fetch(`${FIREBASE_URL}/helpers.json`);
+    if(!res.ok) throw new Error('fetch failed');
+    const data = await res.json();
+    let raw = Array.isArray(data) ? data.filter(Boolean) : (data ? Object.values(data) : []);
+    // migrate any old plain-string helper entries to {name, pin} shape
+    helpers = raw.map(h => typeof h === 'string' ? {name: h, pin: ''} : h);
+  }catch(e){
+    helpers = [];
+  }
+}
+async function saveHelpers(){
+  try{
+    await fetch(`${FIREBASE_URL}/helpers.json`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(helpers)
+    });
+  }catch(e){
+    showBanner("Couldn't save the helper list — check your connection.");
+  }
+}
+
+function renderHelperChips(){
+  const el = document.getElementById('helperChipList');
+  if(!el) return;
+  el.innerHTML = helpers.length
+    ? helpers.map(h=>`<span class="chip active" style="cursor:default;">${h.name}${h.pin ? ' 🔒' : ''} <button class="icon-btn del-helper-btn" data-name="${h.name}" style="margin-left:4px;padding:1px 5px;">×</button></span>`).join('')
+    : `<span class="small" style="color:var(--ink-soft);">No helpers added yet.</span>`;
+  el.querySelectorAll('.del-helper-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      helpers = helpers.filter(h=>h.name!==btn.dataset.name);
+      await saveHelpers();
+      renderHelperChips();
+      populateAssignSelect();
+    });
+  });
+}
+
+function populateAssignSelect(){
+  const sel = document.getElementById('assignSelect');
+  if(!sel) return;
+  sel.innerHTML = `<option value="">Anyone (unassigned)</option>` +
+    helpers.map(h=>`<option value="${h.name}">${h.name}</option>`).join('');
+}
+
+document.getElementById('addHelperBtn')?.addEventListener('click', async ()=>{
+  const nameInput = document.getElementById('newHelperInput');
+  const pinInput = document.getElementById('newHelperPin');
+  const name = nameInput.value.trim();
+  const pin = pinInput.value.trim();
+  if(!name){ showToast("Enter a name first"); return; }
+  if(helpers.some(h=>h.name===name)){ showToast("Already added"); return; }
+  if(!pin || pin.length<4){ showToast("Set a 4+ digit PIN for this helper"); return; }
+  helpers.push({name, pin});
+  nameInput.value = ''; pinInput.value = '';
+  await saveHelpers();
+  renderHelperChips();
+  populateAssignSelect();
+});
+
 /* ---------- ADD ITEM (owner) ---------- */
 function addItem(){
   const cat = document.getElementById('catSelect').value;
   const name = document.getElementById('itemInput').value.trim();
   const qty = document.getElementById('qtyInput').value;
   const unit = document.getElementById('unitSelect').value;
+  const assignedTo = document.getElementById('assignSelect').value;
   if(!name){ showToast("Enter an item name first"); return; }
   entries.push({
     id: 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
     date: todayStr(), category: cat, name: name, qtyNeeded: qty || '', unit: unit,
-    status: 'pending', weight: null, rate: null, amount: null, location: null
+    status: 'pending', weight: null, rate: null, amount: null, location: null,
+    assignedTo: assignedTo || ''
   });
   document.getElementById('itemInput').value='';
   document.getElementById('qtyInput').value='';
@@ -128,7 +239,10 @@ function renderFilterChips(){
 
 function renderToday(){
   renderFilterChips();
-  const todays = entries.filter(e=>e.date===todayStr());
+  let todays = entries.filter(e=>e.date===todayStr());
+  if(role==='helper'){
+    todays = todays.filter(e=> !e.assignedTo || e.assignedTo===currentHelper);
+  }
   let filtered = todays;
   if(activeFilter==='Pending') filtered = todays.filter(e=>e.status==='pending');
   else if(activeFilter==='Purchased') filtered = todays.filter(e=>e.status==='purchased');
@@ -160,12 +274,13 @@ function renderItemRow(e){
   const isDone = e.status==='purchased';
   const locLink = e.location ? `<a class="pin" href="https://maps.google.com/?q=${e.location.lat},${e.location.lng}" target="_blank" rel="noopener">📍 map</a>` : '';
   const ownerActions = role==='owner' ? `<button class="icon-btn edit-btn">Edit</button><button class="btn-danger del-btn">Delete</button>` : '';
+  const assignBadge = e.assignedTo ? `<span class="pin" style="border-color:var(--mustard-soft);color:var(--mustard);">${e.assignedTo}</span>` : '';
   return `
     <div class="item-block" data-id="${e.id}">
       <div class="item">
         <div>
           <div class="item-name">${e.name}</div>
-          <div class="item-need">${e.qtyNeeded ? e.qtyNeeded+' '+e.unit+' needed' : e.unit}</div>
+          <div class="item-need">${e.qtyNeeded ? e.qtyNeeded+' '+e.unit+' needed' : e.unit} ${role==='owner' && assignBadge ? assignBadge : ''}</div>
         </div>
         <div class="item-right">
           ${isDone
