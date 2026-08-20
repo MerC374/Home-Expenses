@@ -3,7 +3,7 @@ const OWNER_PIN = "1234"; // change this before giving the link to anyone
 // ---- Firebase Realtime Database ----
 // Replace with your own project's URL: Firebase console → Realtime Database → copy the URL shown at the top.
 // It looks like: https://your-project-id-default-rtdb.firebaseio.com
-const FIREBASE_URL = "https://home-expenses-8d474-default-rtdb.firebaseio.com/";
+const FIREBASE_URL = "https://home-expenses-8d474-default-rtdb.firebaseio.com";
 
 const CATALOG = {
   "Vegetables": ["Potato (Aloo)","Onion (Pyaz)","Tomato","Ginger-Garlic","Green Chili","Spinach (Palak)","Cauliflower","Cabbage","Capsicum","Cucumber","Lady Finger (Bhindi)"],
