@@ -13,12 +13,14 @@
 
 <!-- AUTH GATE -->
 <div class="gate" id="gate">
+<div class="gate-card">
+  <div class="gate-logo">C</div>
   <h1 style="font-family:'Fraunces',serif;">Chorewise</h1>
   <p id="authSubtitle">Log in to your account</p>
 
   <div id="loginForm">
-    <input type="email" id="loginEmail" placeholder="Email" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--line);">
-    <input type="password" id="loginPassword" placeholder="Password" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--line);">
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPassword" placeholder="Password">
     <button class="gate-btn primary" id="loginBtn">Log in</button>
     <div id="loginError" style="color:var(--rust);font-size:12px;margin:6px 0;"></div>
     <p style="font-size:13px;color:var(--ink-soft);margin-bottom:4px;"><a href="#" id="showForgot">Forgot password?</a></p>
@@ -26,26 +28,30 @@
   </div>
 
   <div id="forgotForm" style="display:none;">
-    <input type="email" id="forgotEmail" placeholder="Your account email" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--line);">
+    <input type="email" id="forgotEmail" placeholder="Your account email">
     <button class="gate-btn primary" id="forgotBtn">Send reset link</button>
     <div id="forgotMessage" style="font-size:12px;margin:6px 0;"></div>
     <p style="font-size:13px;color:var(--ink-soft);"><a href="#" id="backToLoginFromForgot">Back to login</a></p>
   </div>
 
   <div id="signupForm" style="display:none;">
-    <input type="text" id="signupName" placeholder="Your name" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--line);">
-    <input type="email" id="signupEmail" placeholder="Email" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--line);">
-    <input type="password" id="signupPassword" placeholder="Password (6+ characters)" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--line);">
+    <input type="text" id="signupName" placeholder="Your name">
+    <input type="email" id="signupEmail" placeholder="Email">
+    <input type="password" id="signupPassword" placeholder="Password (6+ characters)">
     <button class="gate-btn primary" id="signupBtn">Create account</button>
     <div id="signupError" style="color:var(--rust);font-size:12px;margin:6px 0;"></div>
     <p style="font-size:13px;color:var(--ink-soft);">Already have an account? <a href="#" id="showLogin">Log in</a></p>
   </div>
 </div>
+</div>
 
 <!-- MAIN APP -->
 <div class="wrap hidden" id="app">
   <header>
-    <h1>Chorewise</h1>
+    <div class="brand">
+      <div class="logo-mark">C</div>
+      <h1>Chorewise</h1>
+    </div>
     <button class="role-badge" id="switchRoleBtn"></button>
   </header>
   <div class="sub" id="dateLabel"></div>

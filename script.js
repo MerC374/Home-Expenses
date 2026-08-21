@@ -1104,6 +1104,13 @@ document.getElementById("taskAssignBtn").addEventListener("click", async () => {
   }
 });
 
+const STATUS_PILL_CLASS = {
+  pending: "pill-pending",
+  in_progress: "pill-progress",
+  completed: "pill-done",
+  cancelled: "pill-cancelled",
+};
+
 function taskCardHtml(task, taskId, viewerIsAssignee) {
   const due = task.dueDate
     ? `<span class="small">Due ${task.dueDate}</span>`
@@ -1118,7 +1125,7 @@ function taskCardHtml(task, taskId, viewerIsAssignee) {
   ).join("");
   const statusControl = viewerIsAssignee
     ? `<select class="task-status-select" data-task-id="${taskId}">${statusOptions}</select>`
-    : `<span class="status-pill ${task.status === "completed" ? "pill-done" : "pill-pending"}">${TASK_STATUS_LABELS[task.status]}</span>`;
+    : `<span class="status-pill ${STATUS_PILL_CLASS[task.status] || "pill-pending"}">${TASK_STATUS_LABELS[task.status]}</span>`;
   return `
     <div class="item" style="align-items:flex-start;">
       <div>
