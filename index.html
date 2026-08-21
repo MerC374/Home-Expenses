@@ -56,7 +56,44 @@
     <button class="tab" data-tab="week">This week</button>
     <button class="tab" data-tab="month">This month</button>
     <button class="tab" data-tab="people">People</button>
+    <button class="tab" data-tab="tasks">Tasks</button>
     <button class="tab" data-tab="profile">Profile</button>
+  </div>
+
+  <!-- TASKS -->
+  <div id="tab-tasks" style="display:none;">
+    <div class="card">
+      <h2>Assign a task</h2>
+      <div class="row" style="margin-bottom:8px;">
+        <select id="taskAssigneeSelect" class="field"><option value="">Choose a connection</option></select>
+      </div>
+      <div class="row" style="margin-bottom:8px;">
+        <input type="text" id="taskTitleInput" class="field" placeholder="Task title">
+      </div>
+      <div class="row" style="margin-bottom:8px;">
+        <input type="text" id="taskDescInput" class="field" placeholder="Description (optional)">
+      </div>
+      <div class="row" style="margin-bottom:8px;">
+        <input type="date" id="taskDueInput" class="field">
+        <select id="taskPriorityInput" class="field">
+          <option value="normal">Normal priority</option>
+          <option value="high">High priority</option>
+          <option value="low">Low priority</option>
+        </select>
+      </div>
+      <button class="btn-primary" id="taskAssignBtn">Assign task</button>
+      <div id="taskAssignMessage" style="font-size:12px;margin-top:8px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Tasks I've assigned</h2>
+      <div id="tasksCreatedByMe"></div>
+    </div>
+
+    <div class="card">
+      <h2>Tasks assigned to me</h2>
+      <div id="tasksAssignedToMe"></div>
+    </div>
   </div>
 
   <!-- PROFILE -->

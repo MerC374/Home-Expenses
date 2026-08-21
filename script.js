@@ -1007,6 +1007,184 @@ document
     }
   });
 
+/* ---------- TASKS (Phase 4) ---------- */
+// Firestore layout:
+//   tasks/{taskId} -> {
+//     title, description, createdBy, assignedTo, createdAt, dueDate, priority,
+//     status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+//   }
+// Anyone can be "createdBy" on one task and "assignedTo" on another — no fixed owner/helper account type.
+const TASK_STATUSES = ["pending", "in_progress", "completed", "cancelled"];
+const TASK_STATUS_LABELS = {
+  pending: "Pending",
+  in_progress: "In progress",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+async function getMyAcceptedConnections() {
+  const me = auth.currentUser.uid;
+  const snap = await getDocs(
+    query(collection(db, "connections"), where("uids", "array-contains", me)),
+  );
+  const accepted = snap.docs
+    .map((d) => d.data())
+    .filter((c) => c.status === "accepted");
+  const profiles = await Promise.all(
+    accepted.map(async (c) => {
+      const otherUid = c.uids.find((u) => u !== me);
+      const profSnap = await getDoc(doc(db, "users", otherUid));
+      return profSnap.exists()
+        ? profSnap.data()
+        : { uid: otherUid, name: "Unknown user" };
+    }),
+  );
+  return profiles;
+}
+
+async function renderTasksTab() {
+  const connections = await getMyAcceptedConnections();
+  const sel = document.getElementById("taskAssigneeSelect");
+  sel.innerHTML =
+    `<option value="">Choose a connection</option>` +
+    connections
+      .map((c) => `<option value="${c.uid}">${c.name}</option>`)
+      .join("");
+  document.getElementById("taskAssignMessage").textContent =
+    connections.length === 0
+      ? "You'll need at least one accepted connection before you can assign a task — see the People tab."
+      : "";
+  await renderTasksCreatedByMe();
+  await renderTasksAssignedToMe();
+}
+
+document.getElementById("taskAssignBtn").addEventListener("click", async () => {
+  const assignedTo = document.getElementById("taskAssigneeSelect").value;
+  const title = document.getElementById("taskTitleInput").value.trim();
+  const description = document.getElementById("taskDescInput").value.trim();
+  const dueDate = document.getElementById("taskDueInput").value;
+  const priority = document.getElementById("taskPriorityInput").value;
+  const msgEl = document.getElementById("taskAssignMessage");
+  msgEl.style.color = "var(--rust)";
+  if (!assignedTo) {
+    msgEl.textContent = "Choose who this task is for";
+    return;
+  }
+  if (!title) {
+    msgEl.textContent = "Give the task a title";
+    return;
+  }
+  // Re-verify the connection server-side-of-logic rather than trusting the dropdown alone.
+  const { state } = await getConnectionState(assignedTo);
+  if (state !== "connected") {
+    msgEl.textContent = "You can only assign tasks to an accepted connection";
+    return;
+  }
+  try {
+    await addDoc(collection(db, "tasks"), {
+      title,
+      description,
+      dueDate: dueDate || null,
+      priority,
+      createdBy: auth.currentUser.uid,
+      assignedTo,
+      status: "pending",
+      createdAt: serverTimestamp(),
+    });
+    document.getElementById("taskTitleInput").value = "";
+    document.getElementById("taskDescInput").value = "";
+    document.getElementById("taskDueInput").value = "";
+    msgEl.style.color = "var(--green)";
+    msgEl.textContent = "Task assigned";
+    await renderTasksCreatedByMe();
+  } catch (e) {
+    msgEl.style.color = "var(--rust)";
+    msgEl.textContent =
+      "Couldn't assign the task — check your connection and try again.";
+  }
+});
+
+function taskCardHtml(task, taskId, viewerIsAssignee) {
+  const due = task.dueDate
+    ? `<span class="small">Due ${task.dueDate}</span>`
+    : "";
+  const priorityTag =
+    task.priority && task.priority !== "normal"
+      ? `<span class="status-pill ${task.priority === "high" ? "pill-pending" : "pill-done"}">${task.priority}</span>`
+      : "";
+  const statusOptions = TASK_STATUSES.map(
+    (s) =>
+      `<option value="${s}" ${task.status === s ? "selected" : ""}>${TASK_STATUS_LABELS[s]}</option>`,
+  ).join("");
+  const statusControl = viewerIsAssignee
+    ? `<select class="task-status-select" data-task-id="${taskId}">${statusOptions}</select>`
+    : `<span class="status-pill ${task.status === "completed" ? "pill-done" : "pill-pending"}">${TASK_STATUS_LABELS[task.status]}</span>`;
+  return `
+    <div class="item" style="align-items:flex-start;">
+      <div>
+        <div class="item-name">${escapeHtml(task.title)}</div>
+        ${task.description ? `<div class="item-need">${escapeHtml(task.description)}</div>` : ""}
+        <div class="item-need">${due} ${priorityTag}</div>
+      </div>
+      <div class="item-right">${statusControl}</div>
+    </div>`;
+}
+
+async function renderTasksCreatedByMe() {
+  const me = auth.currentUser.uid;
+  const snap = await getDocs(
+    query(collection(db, "tasks"), where("createdBy", "==", me)),
+  );
+  const el = document.getElementById("tasksCreatedByMe");
+  if (snap.empty) {
+    el.innerHTML = `<div class="empty">You haven't assigned any tasks yet.</div>`;
+    return;
+  }
+  const rows = await Promise.all(
+    snap.docs.map(async (d) => {
+      const task = d.data();
+      const profSnap = await getDoc(doc(db, "users", task.assignedTo));
+      const name = profSnap.exists() ? profSnap.data().name : "Unknown";
+      return `<div class="cat-group"><div class="cat-title">Assigned to ${name}</div>${taskCardHtml(task, d.id, false)}</div>`;
+    }),
+  );
+  el.innerHTML = rows.join("");
+}
+
+async function renderTasksAssignedToMe() {
+  const me = auth.currentUser.uid;
+  const snap = await getDocs(
+    query(collection(db, "tasks"), where("assignedTo", "==", me)),
+  );
+  const el = document.getElementById("tasksAssignedToMe");
+  if (snap.empty) {
+    el.innerHTML = `<div class="empty">No tasks assigned to you right now.</div>`;
+    return;
+  }
+  const rows = await Promise.all(
+    snap.docs.map(async (d) => {
+      const task = d.data();
+      const profSnap = await getDoc(doc(db, "users", task.createdBy));
+      const name = profSnap.exists() ? profSnap.data().name : "Unknown";
+      return `<div class="cat-group"><div class="cat-title">From ${name}</div>${taskCardHtml(task, d.id, true)}</div>`;
+    }),
+  );
+  el.innerHTML = rows.join("");
+  document.querySelectorAll(".task-status-select").forEach((sel) => {
+    sel.addEventListener("change", async () => {
+      try {
+        await updateDoc(doc(db, "tasks", sel.dataset.taskId), {
+          status: sel.value,
+          updatedAt: serverTimestamp(),
+        });
+        showToast("Status updated");
+      } catch (e) {
+        showToast("Couldn't update — try again");
+      }
+    });
+  });
+}
+
 /* ---------- TABS ---------- */
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -1023,6 +1201,8 @@ document.querySelectorAll(".tab").forEach((tab) => {
       which === "month" ? "block" : "none";
     document.getElementById("tab-people").style.display =
       which === "people" ? "block" : "none";
+    document.getElementById("tab-tasks").style.display =
+      which === "tasks" ? "block" : "none";
     document.getElementById("tab-profile").style.display =
       which === "profile" ? "block" : "none";
     if (which === "week")
@@ -1030,6 +1210,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
     if (which === "month")
       renderRangeView("tab-month", rangeEntries(30), "This month");
     if (which === "people") renderPeopleTab();
+    if (which === "tasks") renderTasksTab();
     if (which === "profile") renderProfileTab();
   });
 });
