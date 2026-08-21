@@ -72,3 +72,8 @@
   .pin-box{display:none;gap:8px;margin-top:10px;}
   .pin-box.open{display:flex;}
   .hidden{display:none !important;}
+
+/* Chat bubbles */
+.chat-bubble{max-width:75%;padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.4;word-wrap:break-word;}
+.chat-bubble.mine{align-self:flex-end;background:var(--green);color:#fff;border-bottom-right-radius:4px;}
+.chat-bubble.theirs{align-self:flex-start;background:var(--bg);border:1px solid var(--line);border-bottom-left-radius:4px;}

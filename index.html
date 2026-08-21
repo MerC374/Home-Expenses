@@ -88,23 +88,39 @@
 
   <!-- PEOPLE -->
   <div id="tab-people" style="display:none;">
-    <div class="card">
-      <h2>Find people</h2>
-      <div class="row" style="margin-bottom:10px;">
-        <input type="text" id="peopleSearchInput" class="field" placeholder="Search by name or email">
-        <button class="btn-primary" id="peopleSearchBtn">Search</button>
+    <div id="peopleMainView">
+      <div class="card">
+        <h2>Find people</h2>
+        <div class="row" style="margin-bottom:10px;">
+          <input type="text" id="peopleSearchInput" class="field" placeholder="Search by name or email">
+          <button class="btn-primary" id="peopleSearchBtn">Search</button>
+        </div>
+        <div id="peopleSearchResults"></div>
       </div>
-      <div id="peopleSearchResults"></div>
+
+      <div class="card">
+        <h2>Connection requests</h2>
+        <div id="peopleRequests"></div>
+      </div>
+
+      <div class="card">
+        <h2>Your connections</h2>
+        <div id="peopleConnections"></div>
+      </div>
     </div>
 
-    <div class="card">
-      <h2>Connection requests</h2>
-      <div id="peopleRequests"></div>
-    </div>
-
-    <div class="card">
-      <h2>Your connections</h2>
-      <div id="peopleConnections"></div>
+    <div id="chatView" style="display:none;">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h2 style="margin:0;">Chat with <span id="chatWithName"></span></h2>
+          <button class="btn-ghost" id="chatBackBtn">← Back to People</button>
+        </div>
+        <div id="chatMessages" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:4px;"></div>
+        <div class="row" style="margin-top:12px;">
+          <input type="text" id="chatInput" class="field" placeholder="Type a message">
+          <button class="btn-primary" id="chatSendBtn">Send</button>
+        </div>
+      </div>
     </div>
   </div>
 
