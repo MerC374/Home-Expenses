@@ -11,25 +11,27 @@
 </head>
 <body>
 
-<!-- ROLE GATE -->
+<!-- AUTH GATE -->
 <div class="gate" id="gate">
   <h1 style="font-family:'Fraunces',serif;">Ghar ka Hisaab</h1>
-  <p>Who's using this right now?</p>
-  <button class="gate-btn primary" id="ownerGateBtn">I'm the owner</button>
-  <div class="pin-box" id="pinBox">
-    <input type="password" id="pinInput" placeholder="Enter PIN" inputmode="numeric">
-    <button class="btn-primary" id="pinSubmit">Go</button>
+  <p id="authSubtitle">Log in to your account</p>
+
+  <div id="loginForm">
+    <input type="email" id="loginEmail" placeholder="Email" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--line);">
+    <input type="password" id="loginPassword" placeholder="Password" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--line);">
+    <button class="gate-btn primary" id="loginBtn">Log in</button>
+    <div id="loginError" style="color:var(--rust);font-size:12px;margin:6px 0;"></div>
+    <p style="font-size:13px;color:var(--ink-soft);">New here? <a href="#" id="showSignup">Create an account</a></p>
   </div>
-  <div id="pinError" style="color:var(--rust);font-size:12px;margin-top:6px;"></div>
-  <button class="gate-btn" id="helperGateBtn">I'm doing the shopping</button>
-  <div class="pin-box" id="helperNameBox">
-    <select id="helperNameSelect" style="flex:1;"></select>
+
+  <div id="signupForm" style="display:none;">
+    <input type="text" id="signupName" placeholder="Your name" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--line);">
+    <input type="email" id="signupEmail" placeholder="Email" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--line);">
+    <input type="password" id="signupPassword" placeholder="Password (6+ characters)" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--line);">
+    <button class="gate-btn primary" id="signupBtn">Create account</button>
+    <div id="signupError" style="color:var(--rust);font-size:12px;margin:6px 0;"></div>
+    <p style="font-size:13px;color:var(--ink-soft);">Already have an account? <a href="#" id="showLogin">Log in</a></p>
   </div>
-  <div class="pin-box" id="helperNameBox2" style="margin-top:0;">
-    <input type="password" id="helperPinInput" placeholder="Your PIN" inputmode="numeric">
-    <button class="btn-primary" id="helperNameSubmit">Go</button>
-  </div>
-  <div id="helperNameError" style="color:var(--rust);font-size:12px;margin-top:6px;"></div>
 </div>
 
 <!-- MAIN APP -->
@@ -41,41 +43,31 @@
   <div class="sub" id="dateLabel"></div>
   <div id="bannerArea"></div>
 
-  <div class="tabs">
+  <div class="tabs owner-only">
     <button class="tab active" data-tab="today">Today</button>
     <button class="tab" data-tab="week">This week</button>
     <button class="tab" data-tab="month">This month</button>
   </div>
 
-  <!-- TODAY -->
-  <div id="tab-today">
-    <div class="card owner-only" id="helpersCard">
-      <h2>Your house help</h2>
-      <div class="row" style="margin-bottom:10px;">
-        <input type="text" id="newHelperInput" class="field" placeholder="Helper's name">
-        <input type="password" id="newHelperPin" class="field" placeholder="Set a PIN (4+ digits)" inputmode="numeric" style="max-width:160px;">
-        <button class="btn-ghost" id="addHelperBtn">+ Add</button>
-      </div>
-      <div id="helperChipList" class="row"></div>
-    </div>
+  <div class="card user-only" id="userHome" style="display:none;">
+    <h2>Welcome</h2>
+    <p style="font-size:13px;color:var(--ink-soft);">Your connections and assigned tasks will show up here soon — that part of the app is being built next.</p>
+  </div>
 
-    <div class="card owner-only" id="addCard">
+  <!-- TODAY -->
+  <div id="tab-today" class="owner-only">
+    <div class="card" id="addCard">
       <h2>Add to today's list</h2>
       <div class="row" style="margin-bottom:8px;">
         <select id="catSelect" class="field"></select>
         <input type="text" id="itemInput" class="field" placeholder="Item name" list="itemSuggestions">
         <datalist id="itemSuggestions"></datalist>
       </div>
-      <div class="row" style="margin-bottom:8px;">
+      <div class="row">
         <input type="number" id="qtyInput" class="field" placeholder="Qty needed" min="0" step="0.1">
         <select id="unitSelect" class="field">
           <option>kg</option><option>g</option><option>l</option><option>ml</option>
           <option>pcs</option><option>dozen</option><option>packet</option>
-        </select>
-      </div>
-      <div class="row">
-        <select id="assignSelect" class="field">
-          <option value="">Anyone (unassigned)</option>
         </select>
         <button class="btn-primary" id="addBtn">Add</button>
       </div>
@@ -103,6 +95,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="script.js"></script>
+<script src="script.js" type="module"></script>
 </body>
 </html>
