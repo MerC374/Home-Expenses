@@ -34,13 +34,13 @@ const db = getFirestore(firebaseApp);
 const FIREBASE_URL_RAW = firebaseConfig.databaseURL;
 const FIREBASE_URL = FIREBASE_URL_RAW.replace(/\/+$/, ""); // strips any trailing slash so /entries.json always joins cleanly
 
-// Realtime Database (existing grocery data) now authorizes using the real signed-in user's ID token.
+// Realtime Database (existing grocery data) now authorizes using the real signed-in user's ID token,
+// AND scopes every path under that user's own uid — so person A's grocery list never mixes with person B's.
 async function authedUrl(path) {
   const user = auth.currentUser;
-  const token = user ? await user.getIdToken() : null;
-  return token
-    ? `${FIREBASE_URL}/${path}.json?auth=${token}`
-    : `${FIREBASE_URL}/${path}.json`;
+  if (!user) return null;
+  const token = await user.getIdToken();
+  return `${FIREBASE_URL}/${path}/${user.uid}.json?auth=${token}`;
 }
 
 const CATALOG = {
@@ -162,19 +162,14 @@ document.getElementById("signupBtn").addEventListener("click", async () => {
   }
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    // First account ever created for this app becomes the owner; everyone after is a regular user (helper).
+    // Everyone signs up as a regular user. There's no global "owner" — on a social platform,
+    // anyone can act as the task-giver in their own connections, and as a helper in someone else's.
     // Password itself is never stored anywhere by us — Firebase Auth handles hashing and storage.
-    const ownersQuery = query(
-      collection(db, "users"),
-      where("role", "==", "owner"),
-    );
-    const ownersSnap = await getDocs(ownersQuery);
-    const assignedRole = ownersSnap.empty ? "owner" : "user";
     await setDoc(doc(db, "users", cred.user.uid), {
       uid: cred.user.uid,
       name,
       email,
-      role: assignedRole,
+      role: "user",
       createdAt: serverTimestamp(),
     });
     // onAuthStateChanged below picks up the rest
@@ -212,27 +207,20 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 async function enterApp(r) {
-  role = r; // 'owner' | 'user'
+  role = r; // kept for Phase 4 (task-level owner/helper), not used to hide UI anymore
   document.getElementById("gate").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
-  document
-    .querySelectorAll(".owner-only")
-    .forEach((el) => (el.style.display = role === "owner" ? "" : "none"));
-  document
-    .querySelectorAll(".user-only")
-    .forEach((el) => (el.style.display = role === "user" ? "" : "none"));
   document.getElementById("switchRoleBtn").textContent =
-    `${currentProfile.name} (${role}) · log out`;
+    `${currentProfile.name} · log out`;
   document.getElementById("switchRoleBtn").onclick = async () => {
     await signOut(auth);
     document.getElementById("loginEmail").value = "";
     document.getElementById("loginPassword").value = "";
   };
-  if (role === "owner") {
-    initSelectors();
-    await loadEntries();
-    renderToday();
-  }
+  // Every signed-in person gets their own personal grocery list — scoped to their own account.
+  initSelectors();
+  await loadEntries();
+  renderToday();
 }
 
 /* ---------- SETUP ---------- */

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
@@ -43,19 +43,14 @@
   <div class="sub" id="dateLabel"></div>
   <div id="bannerArea"></div>
 
-  <div class="tabs owner-only">
+  <div class="tabs">
     <button class="tab active" data-tab="today">Today</button>
     <button class="tab" data-tab="week">This week</button>
     <button class="tab" data-tab="month">This month</button>
   </div>
 
-  <div class="card user-only" id="userHome" style="display:none;">
-    <h2>Welcome</h2>
-    <p style="font-size:13px;color:var(--ink-soft);">Your connections and assigned tasks will show up here soon — that part of the app is being built next.</p>
-  </div>
-
   <!-- TODAY -->
-  <div id="tab-today" class="owner-only">
+  <div id="tab-today">
     <div class="card" id="addCard">
       <h2>Add to today's list</h2>
       <div class="row" style="margin-bottom:8px;">
