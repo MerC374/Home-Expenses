@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ghar ka Hisaab — Grocery Tracker</title>
+<title>Chorewise</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -13,7 +13,7 @@
 
 <!-- AUTH GATE -->
 <div class="gate" id="gate">
-  <h1 style="font-family:'Fraunces',serif;">Ghar ka Hisaab</h1>
+  <h1 style="font-family:'Fraunces',serif;">Chorewise</h1>
   <p id="authSubtitle">Log in to your account</p>
 
   <div id="loginForm">
@@ -21,7 +21,15 @@
     <input type="password" id="loginPassword" placeholder="Password" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--line);">
     <button class="gate-btn primary" id="loginBtn">Log in</button>
     <div id="loginError" style="color:var(--rust);font-size:12px;margin:6px 0;"></div>
+    <p style="font-size:13px;color:var(--ink-soft);margin-bottom:4px;"><a href="#" id="showForgot">Forgot password?</a></p>
     <p style="font-size:13px;color:var(--ink-soft);">New here? <a href="#" id="showSignup">Create an account</a></p>
+  </div>
+
+  <div id="forgotForm" style="display:none;">
+    <input type="email" id="forgotEmail" placeholder="Your account email" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--line);">
+    <button class="gate-btn primary" id="forgotBtn">Send reset link</button>
+    <div id="forgotMessage" style="font-size:12px;margin:6px 0;"></div>
+    <p style="font-size:13px;color:var(--ink-soft);"><a href="#" id="backToLoginFromForgot">Back to login</a></p>
   </div>
 
   <div id="signupForm" style="display:none;">
@@ -37,7 +45,7 @@
 <!-- MAIN APP -->
 <div class="wrap hidden" id="app">
   <header>
-    <h1>Ghar ka Hisaab</h1>
+    <h1>Chorewise</h1>
     <button class="role-badge" id="switchRoleBtn"></button>
   </header>
   <div class="sub" id="dateLabel"></div>
@@ -47,6 +55,57 @@
     <button class="tab active" data-tab="today">Today</button>
     <button class="tab" data-tab="week">This week</button>
     <button class="tab" data-tab="month">This month</button>
+    <button class="tab" data-tab="people">People</button>
+    <button class="tab" data-tab="profile">Profile</button>
+  </div>
+
+  <!-- PROFILE -->
+  <div id="tab-profile" style="display:none;">
+    <div class="card">
+      <h2>Your details</h2>
+      <div class="row" style="margin-bottom:8px;">
+        <div class="field">
+          <label class="small">Name</label>
+          <input type="text" id="profileNameInput" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--line);">
+        </div>
+      </div>
+      <div class="row" style="margin-bottom:12px;">
+        <div class="field">
+          <label class="small">Email</label>
+          <input type="email" id="profileEmailDisplay" disabled style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft);">
+        </div>
+      </div>
+      <button class="btn-primary" id="profileSaveBtn">Save changes</button>
+      <div id="profileMessage" style="font-size:12px;margin-top:8px;"></div>
+    </div>
+    <div class="card">
+      <h2>Password</h2>
+      <p style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;">To change your password, we'll email you a secure reset link — same as "Forgot password" on the login screen.</p>
+      <button class="btn-ghost" id="profileResetPasswordBtn">Send password reset email</button>
+      <div id="profileResetMessage" style="font-size:12px;margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <!-- PEOPLE -->
+  <div id="tab-people" style="display:none;">
+    <div class="card">
+      <h2>Find people</h2>
+      <div class="row" style="margin-bottom:10px;">
+        <input type="text" id="peopleSearchInput" class="field" placeholder="Search by name or email">
+        <button class="btn-primary" id="peopleSearchBtn">Search</button>
+      </div>
+      <div id="peopleSearchResults"></div>
+    </div>
+
+    <div class="card">
+      <h2>Connection requests</h2>
+      <div id="peopleRequests"></div>
+    </div>
+
+    <div class="card">
+      <h2>Your connections</h2>
+      <div id="peopleConnections"></div>
+    </div>
   </div>
 
   <!-- TODAY -->
