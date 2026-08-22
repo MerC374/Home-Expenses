@@ -44,7 +44,7 @@ const db = getFirestore(firebaseApp);
 // ---- Gemini (AI chatbot + AI insights) ----
 // Free key from https://aistudio.google.com/apikey — generous free daily quota.
 const GEMINI_API_KEY = CFG.GEMINI_API_KEY || "";
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-2.5-flash"; // gemini-2.0-flash was retired by Google in 2026 — this is the current equivalent
 async function callGemini(prompt) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   const res = await fetch(url, {
