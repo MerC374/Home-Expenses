@@ -25,10 +25,14 @@ import {
   orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// Get this from: Firebase console → gear icon (top left) → Project settings →
-// scroll to "Your apps" → if none exists, click the </> (web) icon to create one → copy the config object shown.
+// All real keys/config values come from window.APP_CONFIG, which config.js sets.
+// config.js is gitignored — it's generated fresh at deploy time from Vercel's Environment
+// Variables, so the actual keys never get committed to your (public) GitHub repo.
+// For local testing, copy config.template.js to config.js and fill in real values there.
+const CFG = window.APP_CONFIG || {};
+
 const firebaseConfig = {
-  apiKey: "AIzaSyBoih0iSrG58egz3d94RgGA3-4DX1u4JII",
+  apiKey: CFG.FIREBASE_API_KEY || "",
   authDomain: "home-expenses-8d474.firebaseapp.com",
   databaseURL: "https://home-expenses-8d474-default-rtdb.firebaseio.com",
   projectId: "home-expenses-8d474",
@@ -38,10 +42,8 @@ const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 
 // ---- Gemini (AI chatbot + AI insights) ----
-// Get a free key from https://aistudio.google.com/apikey — has a generous free daily quota.
-// Note: this key is visible in your deployed JS, same as the Firebase config. Fine for a small
-// personal/client app; if this ever gets popular, move this call behind a small server instead.
-const GEMINI_API_KEY = "AQ.Ab8RN6JjZ-PFe3ZQDtwNziaj52ICo_F65LZ-jO36ilqGH__3FQ";
+// Free key from https://aistudio.google.com/apikey — generous free daily quota.
+const GEMINI_API_KEY = CFG.GEMINI_API_KEY || "";
 const GEMINI_MODEL = "gemini-2.0-flash";
 async function callGemini(prompt) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
@@ -59,10 +61,9 @@ async function callGemini(prompt) {
 }
 
 // ---- Daily.co (voice calling) ----
-// Get these from https://dashboard.daily.co — API key under Developers, subdomain is the
-// "yoursubdomain" part of your dashboard URL (yoursubdomain.daily.co).
-const DAILY_API_KEY = "87ca9c79445b9c70395fc57e2a306b4dc6f991f06da9467e5666042b95b6c532";
-const DAILY_SUBDOMAIN = "HarshitG.daily.co";
+// From https://dashboard.daily.co — API key under Developers, subdomain from your dashboard URL.
+const DAILY_API_KEY = CFG.DAILY_API_KEY || "";
+const DAILY_SUBDOMAIN = CFG.DAILY_SUBDOMAIN || "";
 
 const FIREBASE_URL_RAW = firebaseConfig.databaseURL;
 const FIREBASE_URL = FIREBASE_URL_RAW.replace(/\/+$/, ""); // strips any trailing slash so /entries.json always joins cleanly
