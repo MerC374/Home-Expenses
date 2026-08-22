@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/@daily-co/daily-js"></script>
 </head>
 <body>
 
@@ -63,7 +64,60 @@
     <button class="tab" data-tab="month">This month</button>
     <button class="tab" data-tab="people">People</button>
     <button class="tab" data-tab="tasks">Tasks</button>
+    <button class="tab" data-tab="assistant">Assistant</button>
+    <button class="tab" data-tab="calculator">Calculator</button>
+    <button class="tab" data-tab="activity">Activity</button>
     <button class="tab" data-tab="profile">Profile</button>
+  </div>
+
+  <!-- ASSISTANT (AI chatbot + AI insights) -->
+  <div id="tab-assistant" style="display:none;">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h2 style="margin:0;">Weekly insights</h2>
+        <button class="btn-ghost" id="getInsightsBtn">✨ Summarize my week</button>
+      </div>
+      <div id="insightsResult" class="small" style="color:var(--ink-soft);"></div>
+    </div>
+    <div class="card">
+      <h2>Ask the assistant</h2>
+      <p class="small" style="color:var(--ink-soft);margin-bottom:10px;">Ask about your tasks, groceries, or anything else. This chat isn't saved — it resets on refresh.</p>
+      <div id="assistantMessages" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:4px;background:var(--bg);border:1px solid var(--line);border-radius:10px;margin-bottom:10px;"></div>
+      <div class="row">
+        <input type="text" id="assistantInput" class="field" placeholder="Ask something...">
+        <button class="btn-primary" id="assistantSendBtn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALCULATOR -->
+  <div id="tab-calculator" style="display:none;">
+    <div class="card" style="max-width:320px;margin:0 auto;">
+      <div id="calcDisplay" style="background:var(--ink);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:26px;text-align:right;padding:16px;border-radius:10px;margin-bottom:12px;overflow-x:auto;">0</div>
+      <div id="calcGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;"></div>
+    </div>
+  </div>
+
+  <!-- ACTIVITY (fun games) -->
+  <div id="tab-activity" style="display:none;">
+    <div class="card">
+      <h2>Quick Math Challenge</h2>
+      <div id="mathProblem" style="font-family:'IBM Plex Mono',monospace;font-size:28px;text-align:center;margin:14px 0;"></div>
+      <div class="row" style="justify-content:center;margin-bottom:10px;">
+        <input type="number" id="mathAnswerInput" style="max-width:140px;text-align:center;" placeholder="?">
+        <button class="btn-primary" id="mathSubmitBtn">Check</button>
+      </div>
+      <div style="text-align:center;font-size:13px;color:var(--ink-soft);">Score: <span id="mathScore">0</span> · <span id="mathFeedback"></span></div>
+    </div>
+    <div class="card">
+      <h2>Guess the Number (1–100)</h2>
+      <div class="row" style="justify-content:center;margin-bottom:10px;">
+        <input type="number" id="guessInput" style="max-width:140px;text-align:center;" placeholder="Your guess">
+        <button class="btn-primary" id="guessSubmitBtn">Guess</button>
+        <button class="btn-ghost" id="guessResetBtn">New game</button>
+      </div>
+      <div style="text-align:center;font-size:13px;color:var(--ink-soft);" id="guessFeedback">Guess a number between 1 and 100.</div>
+    </div>
   </div>
 
   <!-- TASKS -->
@@ -104,6 +158,17 @@
 
   <!-- PROFILE -->
   <div id="tab-profile" style="display:none;">
+    <div class="card">
+      <h2>Profile picture</h2>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div id="profileAvatarPreview"></div>
+        <div>
+          <input type="file" id="avatarUploadInput" accept="image/*" style="display:none;">
+          <button class="btn-ghost" id="avatarUploadBtn">Change photo</button>
+          <div id="avatarMessage" style="font-size:12px;margin-top:6px;"></div>
+        </div>
+      </div>
+    </div>
     <div class="card">
       <h2>Your details</h2>
       <div class="row" style="margin-bottom:8px;">
@@ -207,6 +272,13 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- VOICE CALL OVERLAY -->
+<div id="callOverlay" style="display:none;position:fixed;inset:0;background:rgba(20,20,18,0.92);z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+  <div style="color:#fff;font-size:15px;margin-bottom:14px;">Voice call with <span id="callWithName"></span></div>
+  <div id="callFrameContainer" style="width:100%;max-width:400px;height:200px;border-radius:12px;overflow:hidden;background:#000;"></div>
+  <button class="btn-danger" id="callCloseBtn" style="margin-top:16px;padding:10px 24px;">End call</button>
+</div>
 
 <script src="script.js" type="module"></script>
 </body>

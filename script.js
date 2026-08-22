@@ -37,6 +37,33 @@ const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 
+// ---- Gemini (AI chatbot + AI insights) ----
+// Get a free key from https://aistudio.google.com/apikey — has a generous free daily quota.
+// Note: this key is visible in your deployed JS, same as the Firebase config. Fine for a small
+// personal/client app; if this ever gets popular, move this call behind a small server instead.
+const GEMINI_API_KEY = "AQ.Ab8RN6JjZ-PFe3ZQDtwNziaj52ICo_F65LZ-jO36ilqGH__3FQ";
+const GEMINI_MODEL = "gemini-2.0-flash";
+async function callGemini(prompt) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+  });
+  if (!res.ok) throw new Error("Gemini request failed");
+  const data = await res.json();
+  return (
+    data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
+    "I couldn't come up with anything for that."
+  );
+}
+
+// ---- Daily.co (voice calling) ----
+// Get these from https://dashboard.daily.co — API key under Developers, subdomain is the
+// "yoursubdomain" part of your dashboard URL (yoursubdomain.daily.co).
+const DAILY_API_KEY = "87ca9c79445b9c70395fc57e2a306b4dc6f991f06da9467e5666042b95b6c532";
+const DAILY_SUBDOMAIN = "HarshitG.daily.co";
+
 const FIREBASE_URL_RAW = firebaseConfig.databaseURL;
 const FIREBASE_URL = FIREBASE_URL_RAW.replace(/\/+$/, ""); // strips any trailing slash so /entries.json always joins cleanly
 
@@ -725,7 +752,7 @@ async function searchUsers(term) {
 
 function connectionButtonHtml(state, uid) {
   if (state === "connected")
-    return `<button class="btn-ghost open-chat-btn" data-uid="${uid}">Message</button> <button class="btn-danger remove-conn-btn" data-uid="${uid}">Remove</button>`;
+    return `<button class="btn-ghost open-chat-btn" data-uid="${uid}">Message</button> <button class="btn-ghost call-btn" data-uid="${uid}">📞 Call</button> <button class="btn-danger remove-conn-btn" data-uid="${uid}">Remove</button>`;
   if (state === "sent")
     return `<button class="btn-ghost" disabled>Request sent</button>`;
   if (state === "incoming")
@@ -856,6 +883,9 @@ function attachPeopleHandlers() {
   document.querySelectorAll(".open-chat-btn").forEach((btn) => {
     btn.addEventListener("click", () => openChat(btn.dataset.uid));
   });
+  document.querySelectorAll(".call-btn").forEach((btn) => {
+    btn.addEventListener("click", () => startVoiceCall(btn.dataset.uid));
+  });
 }
 
 /* ---------- CHAT (Phase 3) ---------- */
@@ -964,6 +994,11 @@ function renderProfileTab() {
   document.getElementById("profileNameInput").value = currentProfile.name;
   document.getElementById("profileEmailDisplay").value = currentProfile.email;
   document.getElementById("profileMessage").textContent = "";
+  document.getElementById("profileAvatarPreview").innerHTML = avatarHtml(
+    currentProfile.name,
+    currentProfile.photoURL,
+    56,
+  );
 }
 
 document
@@ -1192,6 +1227,388 @@ async function renderTasksAssignedToMe() {
   });
 }
 
+/* ---------- CALCULATOR ---------- */
+let calcInitialized = false;
+function initCalculator() {
+  calcInitialized = true;
+  const display = document.getElementById("calcDisplay");
+  const grid = document.getElementById("calcGrid");
+  let expr = "";
+
+  function render() {
+    display.textContent = expr || "0";
+  }
+  function safeEval(str) {
+    if (!/^[0-9+\-*/.% ]+$/.test(str)) throw new Error("invalid characters");
+    // eslint-disable-next-line no-new-func
+    return Function(`"use strict"; return (${str})`)();
+  }
+
+  const buttons = [
+    "7",
+    "8",
+    "9",
+    "÷",
+    "4",
+    "5",
+    "6",
+    "×",
+    "1",
+    "2",
+    "3",
+    "−",
+    "C",
+    "0",
+    ".",
+    "+",
+    "=",
+  ];
+  grid.innerHTML = buttons
+    .map((b) => {
+      const isEquals = b === "=";
+      const isOp = ["÷", "×", "−", "+", "C"].includes(b);
+      const cls = isEquals ? "btn-primary" : isOp ? "btn-ghost" : "btn-ghost";
+      return `<button class="${cls}" data-key="${b}" style="padding:16px 0;font-size:17px;${isEquals ? "grid-column: span 1;" : ""}">${b}</button>`;
+    })
+    .join("");
+
+  grid.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.key;
+      if (key === "C") {
+        expr = "";
+        render();
+        return;
+      }
+      if (key === "=") {
+        try {
+          const normalized = expr
+            .replace(/×/g, "*")
+            .replace(/÷/g, "/")
+            .replace(/−/g, "-");
+          const result = safeEval(normalized);
+          expr = String(Math.round(result * 1e8) / 1e8);
+        } catch (e) {
+          expr = "Error";
+        }
+        render();
+        return;
+      }
+      if (expr === "Error") expr = "";
+      expr += key;
+      render();
+    });
+  });
+  render();
+}
+
+/* ---------- ACTIVITY: fun games ---------- */
+let activityInitialized = false;
+let mathScoreCount = 0;
+let mathCurrentAnswer = 0;
+let guessTarget = 0;
+let guessAttempts = 0;
+
+function newMathProblem() {
+  const a = Math.floor(Math.random() * 20) + 1;
+  const b = Math.floor(Math.random() * 20) + 1;
+  const ops = ["+", "-", "×"];
+  const op = ops[Math.floor(Math.random() * ops.length)];
+  mathCurrentAnswer = op === "+" ? a + b : op === "-" ? a - b : a * b;
+  document.getElementById("mathProblem").textContent = `${a} ${op} ${b} = ?`;
+  document.getElementById("mathAnswerInput").value = "";
+  document.getElementById("mathFeedback").textContent = "";
+}
+
+function newGuessGame() {
+  guessTarget = Math.floor(Math.random() * 100) + 1;
+  guessAttempts = 0;
+  document.getElementById("guessFeedback").textContent =
+    "Guess a number between 1 and 100.";
+  document.getElementById("guessInput").value = "";
+}
+
+function initActivityGames() {
+  activityInitialized = true;
+  newMathProblem();
+  newGuessGame();
+
+  document.getElementById("mathSubmitBtn").addEventListener("click", () => {
+    const val = parseFloat(document.getElementById("mathAnswerInput").value);
+    const feedback = document.getElementById("mathFeedback");
+    if (val === mathCurrentAnswer) {
+      mathScoreCount++;
+      document.getElementById("mathScore").textContent = mathScoreCount;
+      feedback.textContent = "Correct! 🎉";
+      feedback.style.color = "var(--green)";
+      setTimeout(newMathProblem, 700);
+    } else {
+      feedback.textContent = "Not quite — try again.";
+      feedback.style.color = "var(--rust)";
+    }
+  });
+  document
+    .getElementById("mathAnswerInput")
+    .addEventListener("keydown", (e) => {
+      if (e.key === "Enter") document.getElementById("mathSubmitBtn").click();
+    });
+
+  document.getElementById("guessSubmitBtn").addEventListener("click", () => {
+    const val = parseInt(document.getElementById("guessInput").value, 10);
+    const feedback = document.getElementById("guessFeedback");
+    if (isNaN(val)) {
+      feedback.textContent = "Enter a number first.";
+      return;
+    }
+    guessAttempts++;
+    if (val === guessTarget) {
+      feedback.textContent = `Correct! You got it in ${guessAttempts} guess${guessAttempts > 1 ? "es" : ""}. 🎉`;
+      feedback.style.color = "var(--green)";
+    } else if (val < guessTarget) {
+      feedback.textContent = "Higher →";
+      feedback.style.color = "var(--ink-soft)";
+    } else {
+      feedback.textContent = "← Lower";
+      feedback.style.color = "var(--ink-soft)";
+    }
+  });
+  document.getElementById("guessInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("guessSubmitBtn").click();
+  });
+  document
+    .getElementById("guessResetBtn")
+    .addEventListener("click", newGuessGame);
+}
+
+/* ---------- AI ASSISTANT (chatbot + insights) ---------- */
+let assistantHistory = []; // in-memory only, resets on refresh
+
+function renderAssistantMessages() {
+  const el = document.getElementById("assistantMessages");
+  el.innerHTML = assistantHistory.length
+    ? assistantHistory
+        .map(
+          (m) =>
+            `<div class="chat-bubble ${m.role === "user" ? "mine" : "theirs"}">${escapeHtml(m.text)}</div>`,
+        )
+        .join("")
+    : `<div class="empty">Ask about your tasks, groceries, or anything else.</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendAssistantMessage() {
+  const input = document.getElementById("assistantInput");
+  const text = input.value.trim();
+  if (!text) return;
+  assistantHistory.push({ role: "user", text });
+  input.value = "";
+  renderAssistantMessages();
+  try {
+    const prompt = `You are a helpful assistant inside a household task and grocery app called Chorewise. Answer concisely and practically. User's question: ${text}`;
+    const reply = await callGemini(prompt);
+    assistantHistory.push({ role: "assistant", text: reply });
+  } catch (e) {
+    assistantHistory.push({
+      role: "assistant",
+      text: "I couldn't reach the AI service — check the Gemini API key setup.",
+    });
+  }
+  renderAssistantMessages();
+}
+document
+  .getElementById("assistantSendBtn")
+  .addEventListener("click", sendAssistantMessage);
+document.getElementById("assistantInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendAssistantMessage();
+});
+
+document
+  .getElementById("getInsightsBtn")
+  .addEventListener("click", async () => {
+    const resultEl = document.getElementById("insightsResult");
+    resultEl.textContent = "Thinking...";
+    try {
+      const weekEntries = rangeEntries(7);
+      const total = weekEntries.reduce((s, e) => s + (e.amount || 0), 0);
+      const byCat = {};
+      weekEntries.forEach((e) => {
+        byCat[e.category] = (byCat[e.category] || 0) + (e.amount || 0);
+      });
+      const catSummary =
+        Object.entries(byCat)
+          .map(([c, v]) => `${c}: ₹${Math.round(v)}`)
+          .join(", ") || "no purchases yet";
+
+      const me = auth.currentUser.uid;
+      const tasksSnap = await getDocs(
+        query(collection(db, "tasks"), where("assignedTo", "==", me)),
+      );
+      const tasks = tasksSnap.docs.map((d) => d.data());
+      const pending = tasks.filter(
+        (t) => t.status === "pending" || t.status === "in_progress",
+      ).length;
+      const completed = tasks.filter((t) => t.status === "completed").length;
+
+      const prompt = `Summarize this household's week in 3-4 short sentences, plain and friendly, no headers or bullet points. Grocery spend this week: ₹${Math.round(total)} total, broken down as: ${catSummary}. Tasks assigned to this person: ${pending} still pending/in progress, ${completed} completed. Give one practical suggestion for handling the pending tasks.`;
+      resultEl.textContent = await callGemini(prompt);
+    } catch (e) {
+      resultEl.textContent =
+        "Couldn't generate insights — check the Gemini API key setup.";
+    }
+  });
+
+/* ---------- PROFILE PICTURE ---------- */
+function avatarHtml(name, photoURL, size = 56) {
+  if (photoURL)
+    return `<img src="${photoURL}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;">`;
+  const initial = (name || "?").trim().charAt(0).toUpperCase();
+  const fontSize = Math.round(size * 0.4);
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:${fontSize}px;">${initial}</div>`;
+}
+
+document.getElementById("avatarUploadBtn").addEventListener("click", () => {
+  document.getElementById("avatarUploadInput").click();
+});
+
+// No Firebase Storage (that needs a paid Blaze plan) — instead we shrink the image right in the
+// browser with a canvas and store it as a compact base64 string directly on the user's Firestore doc.
+// Firestore documents cap out at 1MB, so we resize aggressively to stay well under that.
+function resizeImageToDataUrl(file, maxDimension, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height) {
+          if (width > maxDimension) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          }
+        } else {
+          if (height > maxDimension) {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => reject(new Error("Could not read that image"));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("Could not read that file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+document
+  .getElementById("avatarUploadInput")
+  .addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const msgEl = document.getElementById("avatarMessage");
+    msgEl.style.color = "var(--ink-soft)";
+    msgEl.textContent = "Processing...";
+    try {
+      const dataUrl = await resizeImageToDataUrl(file, 128, 0.6);
+      if (dataUrl.length > 700000) {
+        msgEl.style.color = "var(--rust)";
+        msgEl.textContent =
+          "That photo is still too large even after shrinking — try a simpler image.";
+        return;
+      }
+      await updateDoc(doc(db, "users", auth.currentUser.uid), {
+        photoURL: dataUrl,
+      });
+      currentProfile.photoURL = dataUrl;
+      document.getElementById("profileAvatarPreview").innerHTML = avatarHtml(
+        currentProfile.name,
+        dataUrl,
+      );
+      msgEl.style.color = "var(--green)";
+      msgEl.textContent = "Updated";
+    } catch (err) {
+      msgEl.style.color = "var(--rust)";
+      msgEl.textContent =
+        "Couldn't process that image — try a different photo.";
+    }
+  });
+
+/* ---------- VOICE CALLING (Daily.co) ---------- */
+let callFrame = null;
+
+async function getOrCreateCallRoom(otherUid) {
+  const roomName = "call-" + pairId(auth.currentUser.uid, otherUid);
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${DAILY_API_KEY}`,
+  };
+  const existing = await fetch(`https://api.daily.co/v1/rooms/${roomName}`, {
+    headers,
+  });
+  if (existing.ok) return roomName;
+  const created = await fetch("https://api.daily.co/v1/rooms", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      name: roomName,
+      properties: {
+        start_video_off: true,
+        start_audio_off: false,
+        enable_screenshare: false,
+      },
+    }),
+  });
+  if (!created.ok) throw new Error("Could not create call room");
+  return roomName;
+}
+
+async function startVoiceCall(otherUid) {
+  const { state } = await getConnectionState(otherUid);
+  if (state !== "connected") {
+    showToast("You can only call a connection");
+    return;
+  }
+  try {
+    const profSnap = await getDoc(doc(db, "users", otherUid));
+    document.getElementById("callWithName").textContent = profSnap.exists()
+      ? profSnap.data().name
+      : "this person";
+    const roomName = await getOrCreateCallRoom(otherUid);
+    document.getElementById("callOverlay").style.display = "flex";
+    callFrame = window.DailyIframe.createFrame(
+      document.getElementById("callFrameContainer"),
+      {
+        showLeaveButton: true,
+        iframeStyle: { width: "100%", height: "100%", border: "0" },
+      },
+    );
+    await callFrame.join({
+      url: `https://${DAILY_SUBDOMAIN}.daily.co/${roomName}`,
+      startVideoOff: true,
+      startAudioOff: false,
+    });
+    callFrame.on("left-meeting", endVoiceCall);
+  } catch (e) {
+    showToast(
+      "Couldn't start the call — check the Daily.co API key/subdomain setup",
+    );
+    document.getElementById("callOverlay").style.display = "none";
+  }
+}
+function endVoiceCall() {
+  if (callFrame) {
+    callFrame.destroy();
+    callFrame = null;
+  }
+  document.getElementById("callOverlay").style.display = "none";
+}
+document.getElementById("callCloseBtn").addEventListener("click", endVoiceCall);
+
 /* ---------- TABS ---------- */
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -1210,6 +1627,12 @@ document.querySelectorAll(".tab").forEach((tab) => {
       which === "people" ? "block" : "none";
     document.getElementById("tab-tasks").style.display =
       which === "tasks" ? "block" : "none";
+    document.getElementById("tab-assistant").style.display =
+      which === "assistant" ? "block" : "none";
+    document.getElementById("tab-calculator").style.display =
+      which === "calculator" ? "block" : "none";
+    document.getElementById("tab-activity").style.display =
+      which === "activity" ? "block" : "none";
     document.getElementById("tab-profile").style.display =
       which === "profile" ? "block" : "none";
     if (which === "week")
@@ -1218,6 +1641,8 @@ document.querySelectorAll(".tab").forEach((tab) => {
       renderRangeView("tab-month", rangeEntries(30), "This month");
     if (which === "people") renderPeopleTab();
     if (which === "tasks") renderTasksTab();
+    if (which === "calculator" && !calcInitialized) initCalculator();
+    if (which === "activity" && !activityInitialized) initActivityGames();
     if (which === "profile") renderProfileTab();
   });
 });
